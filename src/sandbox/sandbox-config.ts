@@ -679,12 +679,12 @@ export const NetworkConfigSchema = z.object({
     .array(domainPortPatternSchema)
     .describe(
       'List of allowed domains (e.g., ["github.com", "*.npmjs.org", "api.example.com:443"]). ' +
-        'An optional ":port" suffix restricts the entry to that destination port.',
+        'A bare "*" allows all hosts and ports. A ":port" suffix restricts a named host or wildcard domain to that destination port.',
     ),
   deniedDomains: z
     .array(deniedDomainPatternSchema)
     .describe(
-      'List of denied domains. Unlike allowedDomains, a bare "*" is accepted here (deny-all). ' +
+      'List of denied domains. A bare "*" means deny-all. ' +
         'An optional ":port" suffix (e.g., "*:22") restricts the entry to that destination port.',
     ),
   deniedDomainReasons: z

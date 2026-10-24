@@ -143,6 +143,7 @@ export function hasValidIpv6Bracketing(val: string): boolean {
  * registered at run time, so neither accepts what the other refuses.
  */
 export function isValidAllowedDomainEntry(val: string): boolean {
+  if (val === '*') return true
   return (
     hasValidIpv6Bracketing(val) &&
     isValidDomainPattern(splitDomainPatternPort(val).hostPattern)
@@ -150,8 +151,7 @@ export function isValidAllowedDomainEntry(val: string): boolean {
 }
 
 export const ALLOWED_DOMAIN_ENTRY_MESSAGE =
-  DOMAIN_PATTERN_MESSAGE +
-  ' An optional ":port" suffix (1-65535) restricts the entry to that port.'
+  'Invalid allowed domain pattern. Use a domain (example.com), a subdomain wildcard (*.example.com), a bracketed IPv6 literal ([::1]), or "*" for all destinations. A ":port" suffix (1-65535) is permitted on domain and IP patterns, not on "*".'
 
 /**
  * The IP-literal entries of an allow/deny list as `{ range, port? }` rules
@@ -176,8 +176,7 @@ export function stripDomainPatternPort(pattern: string): string {
  * Match a hostname against a domain pattern.
  *
  * Patterns:
- *   - `*` matches everything (deny-all; the schema only accepts this in
- *     deniedDomains).
+ *   - `*` matches everything (allow-all or deny-all, depending on the list).
  *   - `*.example.com` matches any strict subdomain of example.com.
  *   - anything else matches exactly (case-insensitive).
  *

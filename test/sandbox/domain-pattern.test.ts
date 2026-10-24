@@ -1,10 +1,25 @@
 import { describe, test, expect } from 'bun:test'
 import {
   isInjectHostCoveredByAllowedDomains,
+  isValidAllowedDomainEntry,
   matchesDomainPattern,
   matchesDomainPatternWithPort,
   splitDomainPatternPort,
 } from '../../src/sandbox/domain-pattern.js'
+
+describe('allow-all domain pattern', () => {
+  test('only bare "*" allows every host and port', () => {
+    expect(isValidAllowedDomainEntry('*')).toBe(true)
+    expect(isValidAllowedDomainEntry('*:22')).toBe(false)
+    expect(isValidAllowedDomainEntry('*.com')).toBe(false)
+    for (const host of ['example.com', '127.0.0.1', '::1']) {
+      expect(matchesDomainPattern(host, '*')).toBe(true)
+      for (const port of [22, 80, 443, 65535]) {
+        expect(matchesDomainPatternWithPort(host, port, '*')).toBe(true)
+      }
+    }
+  })
+})
 
 describe('matchesDomainPattern', () => {
   test('exact match is case-insensitive', () => {
