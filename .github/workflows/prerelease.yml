@@ -54,12 +54,12 @@ jobs:
             bun_target: bun-darwin-arm64
             smoke: command
           - runner: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-            bun_target: bun-linux-x64-musl
+            target: x86_64-unknown-linux-gnu
+            bun_target: bun-linux-x64
             smoke: version
           - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            bun_target: bun-linux-arm64-musl
+            target: aarch64-unknown-linux-gnu
+            bun_target: bun-linux-arm64
             smoke: version
 
     steps:
@@ -145,7 +145,7 @@ jobs:
       - name: Validate and package release artifacts
         run: |
           set -euo pipefail
-          expected_artifacts=$'srt-aarch64-apple-darwin\nsrt-aarch64-unknown-linux-musl\nsrt-x86_64-unknown-linux-musl'
+          expected_artifacts=$'srt-aarch64-apple-darwin\nsrt-aarch64-unknown-linux-gnu\nsrt-x86_64-unknown-linux-gnu'
           actual_artifacts=$(find dist -mindepth 1 -maxdepth 1 -print | sed 's|.*/||' | LC_ALL=C sort)
           if [[ "$actual_artifacts" != "$expected_artifacts" ]]; then
             echo "Unexpected release artifact directories:" >&2
@@ -153,7 +153,7 @@ jobs:
             exit 1
           fi
           mkdir dist/zips
-          for artifact in srt-aarch64-apple-darwin srt-aarch64-unknown-linux-musl srt-x86_64-unknown-linux-musl; do
+          for artifact in srt-aarch64-apple-darwin srt-aarch64-unknown-linux-gnu srt-x86_64-unknown-linux-gnu; do
             actual=$(find "dist/$artifact" -type f -print | sed 's|.*/||' | LC_ALL=C sort)
             if [[ "$actual" != "$artifact" ]]; then
               echo "Unexpected files in artifact $artifact:" >&2
