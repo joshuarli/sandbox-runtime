@@ -54,12 +54,14 @@ jobs:
             bun_target: bun-darwin-arm64
             smoke: command
           - runner: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
-            bun_target: bun-linux-x64
+            target: x86_64-unknown-linux-musl
+            template: bun-linux-x86_64-musl-static
+            template_sha256: b4a834a93a1c5b6c545c7a863638604adc062e3853fc6cda7472cea9c3d15db7
             smoke: version
           - runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-            bun_target: bun-linux-arm64
+            target: aarch64-unknown-linux-musl
+            template: bun-linux-aarch64-musl-static
+            template_sha256: 7621514049d1f2af25a9db6948633a62b83095cfa333a54726bc5c19a39c6b8f
             smoke: version
 
     steps:
@@ -81,7 +83,27 @@ jobs:
       - name: Install dependencies
         run: bun install --production --ignore-scripts --no-save
       - name: Compile srt
-        run: bun run build:srt -- --target="${{ matrix.bun_target }}" --outfile="srt-${{ matrix.target }}"
+        env:
+          BUN_STATIC_TAG: bun-94e84caa914a69ff2e3f86d6f1319a78e73a4299-static
+        run: |
+          outfile="srt-${{ matrix.target }}"
+          if [[ -n "${{ matrix.template }}" ]]; then
+            template="${{ matrix.template }}"
+            curl -fL --retry 5 -o "$template.zip" \
+              "https://github.com/joshuarli/bun-musl-static/releases/download/${BUN_STATIC_TAG}/${template}.zip"
+            echo "${{ matrix.template_sha256 }}  ${template}.zip" | sha256sum -c -
+            unzip -q "$template.zip"
+            test -x "$template"
+            bun run build:srt -- --compile-executable-path="$template" --outfile="$outfile"
+            test -z "$(readelf -l "$outfile" | grep 'INTERP' || true)"
+            test -z "$(readelf -d "$outfile" | grep 'NEEDED' || true)"
+            if ldd "$outfile" >/dev/null 2>&1; then
+              echo "$outfile is dynamically linked" >&2
+              exit 1
+            fi
+          else
+            bun run build:srt -- --target="${{ matrix.bun_target }}" --outfile="$outfile"
+          fi
       - name: Smoke the binary
         run: |
           asset="srt-${{ matrix.target }}"
@@ -145,7 +167,7 @@ jobs:
       - name: Validate and package release artifacts
         run: |
           set -euo pipefail
-          expected_artifacts=$'srt-aarch64-apple-darwin\nsrt-aarch64-unknown-linux-gnu\nsrt-x86_64-unknown-linux-gnu'
+          expected_artifacts=$'srt-aarch64-apple-darwin\nsrt-aarch64-unknown-linux-musl\nsrt-x86_64-unknown-linux-musl'
           actual_artifacts=$(find dist -mindepth 1 -maxdepth 1 -print | sed 's|.*/||' | LC_ALL=C sort)
           if [[ "$actual_artifacts" != "$expected_artifacts" ]]; then
             echo "Unexpected release artifact directories:" >&2
@@ -153,7 +175,7 @@ jobs:
             exit 1
           fi
           mkdir dist/zips
-          for artifact in srt-aarch64-apple-darwin srt-aarch64-unknown-linux-gnu srt-x86_64-unknown-linux-gnu; do
+          for artifact in srt-aarch64-apple-darwin srt-aarch64-unknown-linux-musl srt-x86_64-unknown-linux-musl; do
             actual=$(find "dist/$artifact" -type f -print | sed 's|.*/||' | LC_ALL=C sort)
             if [[ "$actual" != "$artifact" ]]; then
               echo "Unexpected files in artifact $artifact:" >&2
